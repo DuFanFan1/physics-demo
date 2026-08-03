@@ -3,6 +3,10 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
+# 强制指定一个 Linux 自带的字体，并让 matplotlib 自动查找可用中文字体
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'WenQuanYi Zen Hei', 'Noto Sans CJK SC', 'Arial Unicode MS']
+plt.rcParams['axes.unicode_minus'] = False
+
 # ---------- 页面标题 ----------
 st.set_page_config(page_title="大学物理光学演示器", layout="wide")
 st.title("✨ 大学物理光学干涉虚拟仿真器")
