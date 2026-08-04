@@ -1,0 +1,3 @@
+[server]
+# 关键配置：将静态资源请求指向国内的 CDN 镜像
+staticAssetsPath = "https://cdn.jsdelivr.net/npm/streamlit@1.59.2/lib/static/"
