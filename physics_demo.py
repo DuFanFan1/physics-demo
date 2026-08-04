@@ -2,6 +2,7 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # ---------- 页面设置 ----------
 st.set_page_config(page_title="University Physics Optics Lab", layout="wide")
@@ -20,7 +21,7 @@ def compute_intensity(experiment, wavelength_nm, param1, param2, param3=None, pa
     if experiment == "牛顿环 (等厚干涉)":
         R = param1
         d0 = param2 / 1000.0
-        size = 300              # 降低分辨率，加速计算和传输
+        size = 300
         x = np.linspace(-5, 5, size)
         y = np.linspace(-5, 5, size)
         X, Y = np.meshgrid(x, y)
@@ -107,17 +108,70 @@ else:  # 双缝干涉
 # ---------- 显示图像 ----------
 col1, col2 = st.columns([3, 1])
 with col1:
-    # 图像尺寸调小，适合手机预览
-    fig, ax = plt.subplots(figsize=(5, 4))   # 原来为 (8,6)，现在缩小
+    fig, ax = plt.subplots(figsize=(5, 4))
     ax.imshow(intensity, cmap='gray', extent=extent)
     ax.set_title(title, fontsize=12)
     ax.set_xlabel(xlabel, fontsize=10)
     ax.set_ylabel(ylabel, fontsize=10)
-    # 保留坐标轴刻度，显示数值
     ax.set_xticks(np.linspace(extent[0], extent[1], 5))
     ax.set_yticks(np.linspace(extent[2], extent[3], 5))
     plt.tight_layout()
     st.pyplot(fig)
 
+# ---------- 数据收集功能 (Google Sheets) ----------
+st.sidebar.divider()
+st.sidebar.subheader("📊 提交你的实验观察")
+
+# 尝试连接 Google Sheets
+try:
+    from st_gsheets_connection import GSheetsConnection
+    
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    
+    # 读取现有数据
+    try:
+        df_existing = conn.read(worksheet="Sheet1")
+    except:
+        df_existing = pd.DataFrame()
+    
+    # 创建表单
+    with st.sidebar.form(key="observation_form"):
+        student_id = st.text_input("学号", placeholder="请输入你的学号")
+        name = st.text_input("姓名", placeholder="请输入你的姓名")
+        class_name = st.text_input("班级", placeholder="请输入你的班级")
+        observation = st.text_area("观察结论", placeholder="例如：波长增大时，条纹间距变疏...")
+        experiment_module = st.selectbox("实验名称", ["牛顿环", "劈尖干涉", "双缝干涉"])
+        stage = st.selectbox("阶段", ["活动前", "活动中", "活动后", "课后观察"])
+        
+        submitted = st.form_submit_button("📤 提交观察")
+        
+        if submitted:
+            if not student_id or not name or not class_name or not observation:
+                st.sidebar.warning("⚠️ 请完整填写学号、姓名、班级和观察结论")
+            else:
+                # 准备新数据行（列名与你的表格完全一致）
+                new_data = pd.DataFrame([{
+                    "学号": student_id,
+                    "姓名": name,
+                    "班级": class_name,
+                    "实验名称": experiment_module,
+                    "阶段": stage,
+                    "观察结论": observation
+                }])
+                
+                # 追加新数据
+                updated_df = pd.concat([df_existing, new_data], ignore_index=True)
+                
+                # 写回 Google Sheets
+                conn.update(worksheet="Sheet1", data=updated_df)
+                st.sidebar.success("✅ 提交成功！谢谢你的观察。")
+                st.rerun()
+
+except ImportError:
+    st.sidebar.info("📌 数据收集功能未启用。如需启用，请运行：pip install st-gsheets-connection")
+except Exception as e:
+    st.sidebar.info("📌 数据收集功能未配置。请在 .streamlit/secrets.toml 中配置 Google Sheets 连接信息。")
+
+# ---------- 底部信息 ----------
 st.divider()
 st.caption("📚 基于《物演智启》竞赛作品核心物理公式 | 大学物理光学")
