@@ -1,6 +1,5 @@
 streamlit
 numpy
 matplotlib
+st-gsheets-connection
 pandas
-gspread
-oauth2client
