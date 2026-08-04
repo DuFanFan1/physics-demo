@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# ---------- 页面设置1 ----------
+# ---------- 页面设置 ----------
 st.set_page_config(page_title="University Physics Optics Lab", layout="wide")
 
 st.title("✨ 大学物理光学干涉虚拟仿真器")
@@ -118,59 +118,72 @@ with col1:
     plt.tight_layout()
     st.pyplot(fig)
 
-# ---------- 数据收集功能 (Google Sheets) ----------
+# ---------- 数据收集功能 (st-gsheets-connection) ----------
 st.sidebar.divider()
 st.sidebar.subheader("📊 提交你的实验观察")
 
-# 尝试连接 Google Sheets
+# 尝试多种导入方式
+GSheetsConnection = None
 try:
+    # 方式一：直接导入
     from st_gsheets_connection import GSheetsConnection
-    
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    
-    # 读取现有数据
-    try:
-        df_existing = conn.read(worksheet="Sheet1")
-    except:
-        df_existing = pd.DataFrame()
-    
-    # 创建表单
-    with st.sidebar.form(key="observation_form"):
-        student_id = st.text_input("学号", placeholder="请输入你的学号")
-        name = st.text_input("姓名", placeholder="请输入你的姓名")
-        class_name = st.text_input("班级", placeholder="请输入你的班级")
-        observation = st.text_area("观察结论", placeholder="例如：波长增大时，条纹间距变疏...")
-        experiment_module = st.selectbox("实验名称", ["牛顿环", "劈尖干涉", "双缝干涉"])
-        stage = st.selectbox("阶段", ["活动前", "活动中", "活动后", "课后观察"])
-        
-        submitted = st.form_submit_button("📤 提交观察")
-        
-        if submitted:
-            if not student_id or not name or not class_name or not observation:
-                st.sidebar.warning("⚠️ 请完整填写学号、姓名、班级和观察结论")
-            else:
-                # 准备新数据行（列名与你的表格完全一致）
-                new_data = pd.DataFrame([{
-                    "学号": student_id,
-                    "姓名": name,
-                    "班级": class_name,
-                    "实验名称": experiment_module,
-                    "阶段": stage,
-                    "观察结论": observation
-                }])
-                
-                # 追加新数据
-                updated_df = pd.concat([df_existing, new_data], ignore_index=True)
-                
-                # 写回 Google Sheets
-                conn.update(worksheet="Sheet1", data=updated_df)
-                st.sidebar.success("✅ 提交成功！谢谢你的观察。")
-                st.rerun()
-
 except ImportError:
-    st.sidebar.info("📌 数据收集功能未启用。如需启用，请运行：pip install st-gsheets-connection")
-except Exception as e:
-    st.sidebar.info("📌 数据收集功能未配置。请在 .streamlit/secrets.toml 中配置 Google Sheets 连接信息。")
+    try:
+        # 方式二：导入包后获取
+        import st_gsheets_connection
+        GSheetsConnection = st_gsheets_connection.GSheetsConnection
+    except ImportError:
+        try:
+            # 方式三：Streamlit 内置连接方式
+            from streamlit.connections import ExperimentalBaseConnection
+            from st_gsheets_connection import GSheetsConnection
+        except ImportError:
+            GSheetsConnection = None
+
+if GSheetsConnection is not None:
+    try:
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        
+        # 读取现有数据
+        try:
+            df_existing = conn.read(worksheet="Sheet1")
+        except Exception as e:
+            st.sidebar.warning(f"⚠️ 读取数据失败：{e}")
+            df_existing = pd.DataFrame()
+        
+        # 创建表单
+        with st.sidebar.form(key="observation_form"):
+            student_id = st.text_input("学号", placeholder="请输入你的学号")
+            name = st.text_input("姓名", placeholder="请输入你的姓名")
+            class_name = st.text_input("班级", placeholder="请输入你的班级")
+            observation = st.text_area("观察结论", placeholder="例如：波长增大时，条纹间距变疏...")
+            experiment_module = st.selectbox("实验名称", ["牛顿环", "劈尖干涉", "双缝干涉"])
+            stage = st.selectbox("阶段", ["活动前", "活动中", "活动后", "课后观察"])
+            
+            submitted = st.form_submit_button("📤 提交观察")
+            
+            if submitted:
+                if not student_id or not name or not class_name or not observation:
+                    st.sidebar.warning("⚠️ 请完整填写学号、姓名、班级和观察结论")
+                else:
+                    new_data = pd.DataFrame([{
+                        "学号": student_id,
+                        "姓名": name,
+                        "班级": class_name,
+                        "实验名称": experiment_module,
+                        "阶段": stage,
+                        "观察结论": observation
+                    }])
+                    updated_df = pd.concat([df_existing, new_data], ignore_index=True)
+                    conn.update(worksheet="Sheet1", data=updated_df)
+                    st.sidebar.success("✅ 提交成功！谢谢你的观察。")
+                    st.rerun()
+    
+    except Exception as e:
+        st.sidebar.error(f"❌ 连接失败：{e}")
+else:
+    st.sidebar.info("📌 数据收集功能未启用。请安装：pip install st-gsheets-connection")
+    st.sidebar.info("并配置 .streamlit/secrets.toml")
 
 # ---------- 底部信息 ----------
 st.divider()
