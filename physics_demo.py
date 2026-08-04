@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# ---------- 页面设置 ----------
+# ---------- 页面设置1 ----------
 st.set_page_config(page_title="University Physics Optics Lab", layout="wide")
 
 st.title("✨ 大学物理光学干涉虚拟仿真器")
